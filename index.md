@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Hello World!
-tagline: Supporting tagline
+tagline: An Assortment of Web Application
 ---
 {% include JB/setup %}
 
