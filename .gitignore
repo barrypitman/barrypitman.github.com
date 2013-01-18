@@ -10,4 +10,4 @@ Thumbs.db
 .rvmrc
 *.iml
 .idea
-_gist_cache
+_gist_cache/*.cache
