@@ -32,7 +32,7 @@ The solution is implemented as a JSP custom tag, making it simple to re-use. Usi
 
 We can also offer the developer the option of using a custom AntiSamy policy file:
 
-{% gist 4557487 SafeHtmlTag.java %}
+<code id="gist-4557487" data-file="SafeHtmlTag.java"></code>
 
 The tag implementation caches the loaded policy files internally as an optimization, and loads the policy
 file called ‘antisamy-default.xml’ from the classpath if no custom policyFile is specified.
