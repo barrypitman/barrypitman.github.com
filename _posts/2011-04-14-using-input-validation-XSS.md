@@ -11,7 +11,7 @@ tags: [xss, antisamy]
   <img src="http://imgs.xkcd.com/comics/exploits_of_a_mom.png"/>
 </p>
 
-**[&raquo; Skip to Part 2 &raquo;]({% post_url 2011-04-22-safe-and-clean-HTML-output-with-antisamy %})**
+**[&raquo; Skip to Part 2 &raquo;]({% post_url 2011-04-22-safe-and-clean-html-output-with-antisamy %})**
 
 Cross Site Scripting (XSS) attacks are a [well](http://en.wikipedia.org/wiki/Cross-site_scripting)
 [documented](http://code.google.com/p/owaspantisamy/downloads/detail?name=Arshan%20Dabirsiaghi%20-%20Towards%20Malicious%20Code%20Detection%20and%20Removal.PDF)
@@ -78,7 +78,7 @@ that might add up to 20ms or more. Depending on your application that may or may
 ## Implementation
 Here is my filter class, using a HttpServletRequestWrapper internally to override the `getParameter()`-type methods:
 
-{% gist 4557334 AntiSamyFilter.java %}
+<code id="gist-4557334" data-file="AntiSamyFilter.java"></code>
 
 ### Notes:
 + This method will clean data submitted by regular form submissions from a browser.
