@@ -11,10 +11,15 @@ tags: [xss, antisamy]
   <img src="http://imgs.xkcd.com/comics/exploits_of_a_mom.png"/>
 </p>
 
+**[&raquo; Skip to Part 2 &raquo;]({% post_url 2011-04-22-safe-and-clean-HTML-output-with-antisamy %})**
 
-Cross Site Scripting (XSS) attacks are a well documented vulnerability affecting many web applications.
-There has been a spate of high-profile XSS cases recently. Methods of protecting against these attacks
-depend on whether you want to accept any HTML formatted text from your users or not:
+Cross Site Scripting (XSS) attacks are a [well](http://en.wikipedia.org/wiki/Cross-site_scripting)
+[documented](http://code.google.com/p/owaspantisamy/downloads/detail?name=Arshan%20Dabirsiaghi%20-%20Towards%20Malicious%20Code%20Detection%20and%20Removal.PDF)
+vulnerability affecting many web applications.
+There has been a spate of high-profile [XSS](http://www.theregister.co.uk/2011/03/29/mcafee_website_security_flaws/)
+[cases](http://www.theregister.co.uk/2010/09/22/twitter_xss_genesis/) [recently](http://www.theregister.co.uk/2010/10/04/anti_virus_vendor_xss_snafu/).
+Methods of protecting against these attacks depend on whether you want to accept any HTML formatted text from your
+users or not:
 
 1.  #### Escape all user-supplied data on rendering
     If you don’t plan on accepting HTML input, you can simply escape all user-supplied data.
@@ -28,13 +33,14 @@ depend on whether you want to accept any HTML formatted text from your users or 
     Most likely you’ll want to exclude/filter `<script>` tags.
 
 But there are many other tags/characters you would want to exclude too.
-Just look at http://ha.ckers.org/xss.html to see some of the vast array of exploits,
+Just look at <http://ha.ckers.org/xss.html> to see some of the vast array of exploits,
 and those are just the documented ones. Protecting against all possible attacks by exclusion is almost impossible.
 
 The preferred method is to specify what content the user is allowed to submit
 (a whitelist as opposed to a blacklist), and filter/purify everything else.
 Writing such a library is tricky at best, so go with a recognised, widely used solution.
-HTML Purifier for PHP and AntiSamy for Java/.NET are two such solutions.
+[HTML Purifier](http://htmlpurifier.org/) for PHP and [AntiSamy](http://code.google.com/p/owaspantisamy/) for Java/.NET
+are two such solutions.
 
 ## This is difficult!
 
@@ -44,8 +50,8 @@ Ideally we would like a solution that protects the application and its users by 
 It would have been nice if the JSP default for outputting text with ${} was to escape it.
 Then applications would be safe (to a large degree) from XSS attacks by default,
 and we could un-escape text when we wanted to. Unfortunately that’s not the case.
-Edit: here is an article describing how to override JSP EL expressions by default,
-though I haven’t tried it yet.
+Edit: [here](http://pukkaone.github.com/2011/01/03/jsp-cross-site-scripting-elresolver.html) is an article
+describing how to override JSP EL expressions by default, though I haven’t tried it yet.
 
 ## A solution
 One solution is to implement a Java servlet filter which intercepts requests to the
@@ -88,12 +94,12 @@ Here is my filter class, using a HttpServletRequestWrapper internally to overrid
 + The implementation does not cache the filtered values, so calling request.getParameter(“name”)
   twice will cause the value to be cleaned twice. Caching could be implemented if required.
 
-+ I’ve uploaded the source code as a maven project on GitHub. It includes a sample web application
-  with simple JSP for testing the output of XSS hacks against the filter above, and a
++ I’ve uploaded the source code as a maven project on [GitHub](https://github.com/barrypitman/antisamy-servlet-filter).
+  It includes a sample web application with simple JSP for testing the output of XSS hacks against the filter above, and a
   maven-jetty-plugin configuration to get going quickly.
 
 + This is an application-level filter. You might also want to use a firewall,
-  e.g. mod_security for Apache for defence-in-depth.
+  e.g. [mod_security](http://www.modsecurity.org/) for Apache for defence-in-depth.
 
 ### Useful Resources:
 1. <http://code.google.com/p/doctype/wiki/ArticleIntroductionToXSS>

@@ -1,6 +1,7 @@
 /* Override some defaults */
 html, body {
-  background-color: #eee;
+    background: #eee url(../../../images/pw_maze_white.png) repeat;
+    font-size: 14px;
 }
 .navbar {
   margin-bottom: 0;
@@ -33,6 +34,20 @@ html, body {
     -webkit-border-radius: 0 0 6px 6px;
     -moz-border-radius: 0 0 6px 6px;
     border-radius: 0 0 6px 6px;
+
+    background-image: linear-gradient(bottom, rgb(0,84,153) 6%, rgb(0,109,204) 53%);
+    background-image: -o-linear-gradient(bottom, rgb(0,84,153) 6%, rgb(0,109,204) 53%);
+    background-image: -moz-linear-gradient(bottom, rgb(0,84,153) 6%, rgb(0,109,204) 53%);
+    background-image: -webkit-linear-gradient(bottom, rgb(0,84,153) 6%, rgb(0,109,204) 53%);
+    background-image: -ms-linear-gradient(bottom, rgb(0,84,153) 6%, rgb(0,109,204) 53%);
+
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.06, rgb(0,84,153)),
+        color-stop(0.53, rgb(0,109,204))
+    );
 }
 
 .page-header h1 {
@@ -75,5 +90,14 @@ html, body {
 	background:#57A957;
 	border:1px solid #4C964D;
 	color:#FFF;
+}
+
+footer a {
+    text-decoration: underline;
+}
+
+.post-share {
+    list-style: none;
+    display: inline-block;
 }
 	

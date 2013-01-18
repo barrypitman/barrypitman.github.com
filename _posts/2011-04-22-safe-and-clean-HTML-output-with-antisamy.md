@@ -8,9 +8,11 @@ tags: [xss, antisamy]
 {% include JB/setup %}
 
 ## Introduction
-My last blog post discussed one method of protecting your web application against Cross-Site Scripting (XSS)
-attacks; by filtering all user input with an AntiSamy servlet filter during request processing.
-In this post I’d like to discuss an alternative/complementary method involving AntiSamy;
+
+My [last blog post]({% post_url 2011-04-14-using-input-validation-XSS %}) discussed one method of protecting your web
+application against Cross-Site Scripting (XSS) attacks; by filtering all user input with an
+[AntiSamy servlet filter](https://github.com/barrypitman/antisamy-servlet-filter)
+during request processing. In this post I’d like to discuss an alternative/complementary method involving AntiSamy;
 filtering HTML-formatted content during response processing.
 
 ## Recap
@@ -34,6 +36,7 @@ We can also offer the developer the option of using a custom AntiSamy policy fil
 
 The tag implementation caches the loaded policy files internally as an optimization, and loads the policy
 file called ‘antisamy-default.xml’ from the classpath if no custom policyFile is specified.
-I’ve updated the source in the GitHub project from my last post with this tag.
+I’ve updated the source in the [GitHub project](https://github.com/barrypitman/antisamy-servlet-filter) from my
+last post with this tag.
 
 I hope someone finds this useful!

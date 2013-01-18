@@ -1,6 +1,6 @@
 # This is the default format. 
 # For more see: https://github.com/mojombo/jekyll/wiki/Permalinks
-permalink: /:categories/:year/:month/:day/:title 
+permalink: /:year/:month/:day/:title
 
 exclude: [".rvmrc", ".rbenv-version", "README.md", "Rakefile", "changelog.md"]
 auto: true
@@ -72,7 +72,6 @@ JB :
   # Some JB helpers refer to these paths; change them here if needed.
   #
   archive_path: /archive.html
-  categories_path : /categories.html
   tags_path : /tags.html
 
   # Settings for comments helper
@@ -97,15 +96,28 @@ JB :
     mixpanel :
         token : '_MIXPANEL_TOKEN_'
 
-  # Settings for sharing helper. 
-  # Sharing is for things like tweet, plusone, like, reddit buttons etc.
-  # Set 'provider' to the sharing provider you want to use.
-  # Set 'provider' to false to turn sharing off globally.
-  #
+  # Settings for sharing
+      # Sharing is for things like tweet, plusone, hn upvotes, like, linkedin
+      # Add a tweet button 		=> provider : tweet
+      # Add a like button 		=> provider : like (you also need a facebook appid)
+      # Add a plus one button 	=> provider : plusone
+      # Add a HN button 		=> provider : hn
+      # Add them all (i.e. hn + tweet + plusone + like) => provider : all
+      # Set 'provider' to the sharing provider you want to use.
+      # Set 'provider' to false to turn sharing off globally.
+      #
   sharing :
-    provider : false
-    
-  # Settings for all other include helpers can be defined by creating 
+    provider : all
+    twitter :
+      size :
+      via :
+      count :
+    googleplus :
+      size : medium
+      width :
+      annotation : bubble
+
+  # Settings for all other include helpers can be defined by creating
   # a hash with key named for the given helper. ex:
   #
   #   pages_list :

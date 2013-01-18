@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Image to DataURI translation at runtime in CSS"
+title: "CSS Background Image to DataURI translation at runtime"
 description: "Replacing background-images with data URIs at runtime"
 category: css
 tags: [css, datauri, runtime]
@@ -8,10 +8,10 @@ tags: [css, datauri, runtime]
 {% include JB/setup %}
 
 ## Introduction
-Data URI's are a method of embedding inline data in web page responses.
+[Data URI's](http://en.wikipedia.org/wiki/Data_URI_scheme) are a method of embedding inline data in web page responses.
 For instance, using data URIs, a background image can be embedded within a
 CSS file, reducing the number of requests that must be made to the originating server.
-According to Yahoo’s YSlow tool, minimizing HTTP requests is number one on the list of
+According to Yahoo’s [YSlow](http://developer.yahoo.com/yslow/) tool, minimizing HTTP requests is number one on the list of
 'Web Performance Best Practices and Rules'.
 
 A data URI is a string representation of a file’s contents (base64 encoded), with the following format:
@@ -26,7 +26,8 @@ as opposed to
     <img src="../images/red_dot.png" alt'"Red dot"/>
 
 Using base64 encoding will increase the size of the image by 1/3, but that increase can be offset by
-gzipping the response (and you’ll be making fewer requests). Wikipedia has a good section on the pros/cons
+gzipping the response (and you’ll be making fewer requests). [Wikipedia](http://en.wikipedia.org/wiki/Data_URI_scheme)
+has a good section on the pros/cons
 of using data URI’s. One serious disadvantage is that older browsers, e.g. IE < 7, don’t support data URIs
 
 ## Data URIs as background images
@@ -42,7 +43,8 @@ instead of:
         background: url('../images/icon_warning_32x32.png') no-repeat;
     }
 
-This method has similar benefits to using 'image sprites', but also has several advantages over them.
+This method has similar benefits to using ['image sprites'](http://www.alistapart.com/articles/sprites),
+but also has [several advantages](http://www.nczonline.net/blog/2010/07/06/data-uris-make-css-sprites-obsolete/) over them.
 In many cases, background images are small icons, background gradients etc. which are well suited
 to be replaced with data URIs. I noticed that Google is using both techniques on their search results
 pages; the Google logo and other icons are served as an image sprite, while dynamic images/thumbnails
@@ -61,19 +63,19 @@ but wouldn’t it be nice to be able to automatically convert background images 
 serve the right version automatically?
 
 ## Runtime replacement of background-images with data URIs
-I have implemented a Java servlet filter (source available on GitHub) which dynamically 'includes'
-background images that are referenced from CSS files as data URIs. Using this filter alleviates
-the burden of maintaining two separate sets of CSS files; you only need one have one CSS file and
-the filter will include background images if the user agent supports them at runtime.
-Simply put, it includes/inlines background images by performing server-side includes on the image
-references at runtime, using
+I have implemented a Java servlet filter
+([source available on GitHub](https://github.com/barrypitman/CSS-data-URI-substitution-filter))
+which dynamically 'includes' background images that are referenced from CSS files as data URIs.
+Using this filter alleviates the burden of maintaining two separate sets of CSS files; you only
+need one have one CSS file and the filter will include background images if the user agent supports
+them at runtime. Simply put, it includes/inlines background images by performing server-side includes
+on the image references at runtime, using
 
-    httpServletRequest.getRequestDispatcher(backgroundImageUrl)
-         .include(httpServletRequest, wrappedResponse);
+    httpServletRequest.getRequestDispatcher(backgroundImageUrl).include(httpServletRequest, wrappedResponse);
 
 Obviously the filter should only be mapped to CSS files that you’d like to perform this tranformation on.
 
-_The filter operates as follows:_
+**The filter operates as follows:**
 
 1. Check the the user agent supports data URIs. If not, skip filter.
 2. Wrap the response to the CSS file request with a custom ServletResponseWrapper which captures the response in a
