@@ -11,7 +11,7 @@ tags: [xss, antisamy]
   <img src="http://imgs.xkcd.com/comics/exploits_of_a_mom.png"/>
 </p>
 
-**[&raquo; Skip to Part 2 &raquo;]({% post_url 2011-04-22-safe-and-clean-html-output-with-antisamy %})**
+**[&raquo; Skip to Part 2 &raquo;]({% post_url 2011-04-22-safe-and-clean-HTML-output-with-antisamy %})**
 
 Cross Site Scripting (XSS) attacks are a [well](http://en.wikipedia.org/wiki/Cross-site_scripting)
 [documented](http://code.google.com/p/owaspantisamy/downloads/detail?name=Arshan%20Dabirsiaghi%20-%20Towards%20Malicious%20Code%20Detection%20and%20Removal.PDF)
