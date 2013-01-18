@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Preventing XSS attacks with AntiSamy (Part 2)</title>
+    <meta name="description" content="Safe and clean HTML output with AntiSamy">
+    <meta name="author" content="Barry Pitman">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+    <link href="/assets/themes/twitter/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/themes/twitter/css/style.css?body=1" rel="stylesheet" type="text/css" media="all">
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/themes/twitter/../../images/favicon.ico">
+  </head>
+
+  <body>
+
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="/">Barry Pitman</a>
+          <ul class="nav">
+            
+            
+            
+
+
+  
+    
+      
+      	
+      	<li><a href="/about.html">About</a></li>
+      	
+      
+    
+  
+    
+      
+      	
+      	<li><a href="/archive.html">Archive</a></li>
+      	
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+
+
+
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="content">
+        
+<div class="page-header">
+  <h1>Preventing XSS attacks with AntiSamy (Part 2)</h1>
+</div>
+
+<div class="row">
+  <div class="span12">
+    <h2>Introduction</h2>
+
+<p>My <a href="/2011/04/14/using-input-validation-XSS">last blog post</a> discussed one method of protecting your web
+application against Cross-Site Scripting (XSS) attacks; by filtering all user input with an
+<a href="https://github.com/barrypitman/antisamy-servlet-filter">AntiSamy servlet filter</a>
+during request processing. In this post I’d like to discuss an alternative/complementary method involving AntiSamy;
+filtering HTML-formatted content during response processing.</p>
+
+<h2>Recap</h2>
+
+<p>To protect users from XSS attacks we should escape user-supplied inputs using e.g. <code>&lt;c:out/&gt;</code> tags in JSP files.
+We can’t escape HTML-formatted content with ‘&lt;c:out/>’ tags because we’d be escaping the formatting as well.
+We need an intelligent library like AntiSamy to decide what formatting to allow and what to remove
+(based on a well-defined policy).</p>
+
+<p>When displaying user-supplied HTML-formatted content to a user, XSS attacks are not the only thing we need to
+worry about. Imagine how this input: <code>&lt;/div&gt;&lt;/div&gt;</code> could potentially mess up your layout! Fortunately AntiSamy
+will also check for unclosed tags and remove/close them for you.</p>
+
+<h2>Solution</h2>
+
+<p>The solution is implemented as a JSP custom tag, making it simple to re-use. Using it in a JSP file might look like this:</p>
+
+<pre><code>&lt;safeHtml:out text="${someBean.htmlTextToRender}"/&gt;
+</code></pre>
+
+<p>We can also offer the developer the option of using a custom AntiSamy policy file:</p>
+
+<script src='https://gist.github.com/4557487.js?file=SafeHtmlTag.java'></script>
+
+
+<p><noscript><pre><code>/<em>*
+ * JSP tag that renders AntiSamy-filtered HTML, useful for displaying HTML markup in a safe way.
+ *
+ * @author barry pitman
+ * @since 2011/04/14 1:26 PM
+ </em>/
+public class SafeHtmlTag extends TagSupport {</p>
+
+<pre><code>private static final long serialVersionUID = 1L;
+private static final Logger LOG = Logger.getLogger(SafeHtmlTag.class);
+private static final AntiSamy DEFAULT_ANTI_SAMY = new AntiSamy(loadPolicy(&amp;quot;antisamy-default.xml&amp;quot;));
+private static final Map&amp;lt;String, Policy&amp;gt; POLICY_CACHE = new ConcurrentHashMap&amp;lt;String, Policy&amp;gt;();
+
+private String text;
+private String policyFile;
+
+public void setText(String text) {
+    this.text = text;
+}
+
+public void setPolicyFile(String policyFile) {
+    this.policyFile = policyFile;
+}
+
+public int doStartTag() throws JspException {
+    try {
+        CleanResults scan = getAntiSamy().scan(text);
+        if (scan.getNumberOfErrors() &amp;gt; 0) {
+            LOG.warn(&amp;quot;antisamy encountered problem with input: &amp;quot; + scan.getErrorMessages());
+        }
+        pageContext.getOut().print(scan.getCleanHTML());
+    } catch (Exception e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
+    return SKIP_BODY;
+}
+
+public int doEndTag() throws JspException {
+    return EVAL_PAGE;
+}
+
+protected AntiSamy getAntiSamy() {
+    if (policyFile == null || &amp;quot;&amp;quot;.equals(policyFile)) {
+        return DEFAULT_ANTI_SAMY;
+    }
+    return new AntiSamy(loadPolicy(policyFile));
+}
+
+private static Policy loadPolicy(String name) {
+    if (POLICY_CACHE.containsKey(name)) {
+        return POLICY_CACHE.get(name);
+    }
+    try {
+        LOG.debug(&amp;quot;Loading policy file '&amp;quot; + name + &amp;quot;' from classpath&amp;quot;);
+        URL url = SafeHtmlTag.class.getClassLoader().getResource(name);
+        if (url == null || url.getFile() == null) {
+            throw new FileNotFoundException(&amp;quot;classpath file '&amp;quot; + name + &amp;quot;' was not found!&amp;quot;);
+        }
+        Policy loadedPolicy = Policy.getInstance(url.getFile());
+        POLICY_CACHE.put(name, loadedPolicy);
+        return loadedPolicy;
+    } catch (Exception e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
+}
+</code></pre>
+
+<p>}</code></pre></noscript></p>
+
+<p>The tag implementation caches the loaded policy files internally as an optimization, and loads the policy
+file called ‘antisamy-default.xml’ from the classpath if no custom policyFile is specified.
+I’ve updated the source in the <a href="https://github.com/barrypitman/antisamy-servlet-filter">GitHub project</a> from my
+last post with this tag.</p>
+
+<p>I hope someone finds this useful!</p>
+
+    <hr>
+    <div class="pagination">
+      <ul>
+      
+        <li class="prev"><a href="/2011/04/14/using-input-validation-XSS" title="Preventing XSS attacks with AntiSamy (Part 1)">&larr; Previous</a></li>
+      
+        <li><a href="/archive.html">Archive</a></li>
+      
+        <li class="next"><a href="/2011/06/17/runtime-image-to-datauri-in-css" title="CSS Background Image to DataURI translation at runtime">Next &rarr;</a></li>
+      
+      </ul>
+    </div>
+    <hr>
+    
+
+
+  <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_developer = 1;
+    var disqus_shortname = 'barrypitman'; // required: replace example with your forum shortname
+    
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">blog comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+
+
+  </div>
+
+</div>
+
+
+      </div>
+
+      <footer>
+          <div class="row">
+              <div class="span2 offset3">
+                  &copy; Barry Pitman 2013
+              </div>
+              <div class="span2">
+                  <a href="http://github.com/barrypitman">github.com/barrypitman</a>
+                  <a href="http://twitter.com/barrypitman">twitter.com/barrypitman</a>
+              </div>
+              <div class="span2">
+                   
+
+  
+  		
+<ul class="post-share ulno mob">
+
+<!-- Twitter -->
+<li class="tw"><a href="https://twitter.com/share" class="twitter-share-button" data-text="Preventing XSS attacks with AntiSamy (Part 2)" data-via="" data-related="barrypitman" data-count="" data-size="">Tweet</a>
+
+<!-- Google+ -->
+<li class="gp"><div class="g-plusone" data-size="medium" data-annotation="bubble" data-width=""></div>
+
+
+</ul>
+
+<script>
+
+(function(doc, script) {
+
+    // Async Social Buttons
+    var js,
+        fjs = doc.getElementsByTagName(script)[0],
+        add = function(url, id) {
+            if (doc.getElementById(id)) {return;}
+            js = doc.createElement(script);
+            js.src = url;
+            id && (js.id = id);
+            fjs.parentNode.insertBefore(js, fjs);
+        };
+
+    // Twitter SDK
+    add('//platform.twitter.com/widgets.js', 'twitter-wjs');
+
+    // Google+ button
+    add('https://apis.google.com/js/plusone.js');
+
+}(document, 'script'));
+
+</script>
+  
+
+
+              </div>
+          </div>
+      </footer>
+
+    </div> <!-- /container -->
+
+    
+  </body>
+</html>
+

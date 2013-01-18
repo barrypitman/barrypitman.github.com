@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+ 
+ <title>Barry Pitman</title>
+ <link href="http://barrypitman.github.com/atom.xml" rel="self"/>
+ <link href="http://barrypitman.github.com"/>
+ <updated>2013-01-18T15:41:25+01:00</updated>
+ <id>http://barrypitman.github.com</id>
+ <author>
+   <name>Barry Pitman</name>
+   <email>barrypitman@gmail.com</email>
+ </author>
+
+ 
+ <entry>
+   <title>CSS Background Image to DataURI translation at runtime</title>
+   <link href="http://barrypitman.github.com/2011/06/17/runtime-image-to-datauri-in-css"/>
+   <updated>2011-06-17T00:00:00+02:00</updated>
+   <id>http://barrypitman.github.com/2011/06/17/runtime-image-to-datauri-in-css</id>
+   <content type="html">&lt;h2&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://en.wikipedia.org/wiki/Data_URI_scheme&quot;&gt;Data URI's&lt;/a&gt; are a method of embedding inline data in web page responses.
+For instance, using data URIs, a background image can be embedded within a
+CSS file, reducing the number of requests that must be made to the originating server.
+According to Yahoo’s &lt;a href=&quot;http://developer.yahoo.com/yslow/&quot;&gt;YSlow&lt;/a&gt; tool, minimizing HTTP requests is number one on the list of
+'Web Performance Best Practices and Rules'.&lt;/p&gt;
+
+&lt;p&gt;A data URI is a string representation of a file’s contents (base64 encoded), with the following format:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;data:[&amp;lt;MIME-type&amp;gt;][;charset=&amp;lt;encoding&amp;gt;][;base64],&amp;lt;data&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;e.g. a small red dot in an &lt;img&gt; tag:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;img src=&quot;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA
+AAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO
+9TXL0Y4OHwAAAABJRU5ErkJggg==&quot; alt=&quot;Red dot&quot;/&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;as opposed to&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;img src=&quot;../images/red_dot.png&quot; alt'&quot;Red dot&quot;/&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Using base64 encoding will increase the size of the image by 1/3, but that increase can be offset by
+gzipping the response (and you’ll be making fewer requests). &lt;a href=&quot;http://en.wikipedia.org/wiki/Data_URI_scheme&quot;&gt;Wikipedia&lt;/a&gt;
+has a good section on the pros/cons
+of using data URI’s. One serious disadvantage is that older browsers, e.g. IE &amp;lt; 7, don’t support data URIs&lt;/p&gt;
+
+&lt;h2&gt;Data URIs as background images&lt;/h2&gt;
+
+&lt;p&gt;Data URIs are normally embedded in files which are meant to be cached by the brower. One common use-case
+is replacing background images references in CSS files to data URIs, e.g.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;.warningImage {
+    background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAACXBIWXMAAC4jAA...=') no-repeat;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;instead of:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;.warningImage {
+    background: url('../images/icon_warning_32x32.png') no-repeat;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This method has similar benefits to using &lt;a href=&quot;http://www.alistapart.com/articles/sprites&quot;&gt;'image sprites'&lt;/a&gt;,
+but also has &lt;a href=&quot;http://www.nczonline.net/blog/2010/07/06/data-uris-make-css-sprites-obsolete/&quot;&gt;several advantages&lt;/a&gt; over them.
+In many cases, background images are small icons, background gradients etc. which are well suited
+to be replaced with data URIs. I noticed that Google is using both techniques on their search results
+pages; the Google logo and other icons are served as an image sprite, while dynamic images/thumbnails
+are served as data-uri images inline with the content.&lt;/p&gt;
+
+&lt;p&gt;The primary advantage of data URI background images over image sprites is that they are easier to maintain.
+Still, I’d argue that maintaining them won’t be breeze; you’ll have to:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;maintain two copies of the css file (one with links, one with data URIs)&lt;/li&gt;
+&lt;li&gt;a copy of the image&lt;/li&gt;
+&lt;li&gt;keep them in sync over time&lt;/li&gt;
+&lt;li&gt;serve the data URI version to browsers which support them.&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;There are several online tools which can assist by converting your images to data URIs,
+but wouldn’t it be nice to be able to automatically convert background images at runtime and
+serve the right version automatically?&lt;/p&gt;
+
+&lt;h2&gt;Runtime replacement of background-images with data URIs&lt;/h2&gt;
+
+&lt;p&gt;I have implemented a Java servlet filter
+(&lt;a href=&quot;https://github.com/barrypitman/CSS-data-URI-substitution-filter&quot;&gt;source available on GitHub&lt;/a&gt;)
+which dynamically 'includes' background images that are referenced from CSS files as data URIs.
+Using this filter alleviates the burden of maintaining two separate sets of CSS files; you only
+need one have one CSS file and the filter will include background images if the user agent supports
+them at runtime. Simply put, it includes/inlines background images by performing server-side includes
+on the image references at runtime, using&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;httpServletRequest.getRequestDispatcher(backgroundImageUrl).include(httpServletRequest, wrappedResponse);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Obviously the filter should only be mapped to CSS files that you’d like to perform this tranformation on.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The filter operates as follows:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Check the the user agent supports data URIs. If not, skip filter.&lt;/li&gt;
+&lt;li&gt;Wrap the response to the CSS file request with a custom ServletResponseWrapper which captures the response in a
+CharArrayWriter instead of streaming it back to the client (so we can modify it later).&lt;/li&gt;
+&lt;li&gt;Pass the request along the filter chain, i.e. &lt;code&gt;filterChain.doFilter(httpServletRequest, wrappedResponse);&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Extract the response as a string. At this point we have the contents of the CSS file as a string.&lt;/li&gt;
+&lt;li&gt;Using regex, find references to background images within the CSS contents.&lt;/li&gt;
+&lt;li&gt;For each reference to a background image url (e.g. '../images/button.gif'):&lt;/li&gt;
+&lt;li&gt;Wrap the response with a new custom ServletResponseWrapper which captures the response in a new ByteArrayOutputStream&lt;/li&gt;
+&lt;li&gt;Use the request dispatcher to 'include' the referenced image, i.e.
+&lt;code&gt;request.getRequestDispatcher(backgroundImageUrl).include(httpServletRequest, imageResponseWrapper);&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Extract the image contents as a byte[] from the wrapped response&lt;/li&gt;
+&lt;li&gt;Using the filename and byte[], convert the image to a data URI representation&lt;/li&gt;
+&lt;li&gt;Replace the reference to backgroud image url in the CSS file contents (from top-level step 4) with its data URI
+representation.&lt;/li&gt;
+&lt;li&gt;Note: if a step above fails (e.g. 404 for the image), we leave the original reference intact.&lt;/li&gt;
+&lt;li&gt;Write the modified CSS file contents back to the client.&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;Obviously the regex used to match extract the image URLs from the contents of the CSS file is an
+important part of this process. Getting it wrong could cause one to mess up the returned CSS
+content badly! The patten which I have so far (which could probably be improved upon) is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;\bbackground(-image)?:\s*url\(['|&quot;]?(.*?)['|&quot;]?\)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In addition to the pattern above, the filter will ignore image URLs that appear to reference
+external images (e.g. on other sites) as well as images that are already in data URI format.&lt;/p&gt;
+
+&lt;p&gt;I have tested this filter on some fairly large CSS files, including a  minized version of the
+jQuery UI stylesheet, and it was able to replace all background image references with their data
+URI representation without problems. It has been tested in Jetty and Tomcat.&lt;/p&gt;
+
+&lt;h2&gt;Notes&lt;/h2&gt;
+
+&lt;ol&gt;
+&lt;li&gt;The filter could easily be extended to be able to include other types of content&lt;/li&gt;
+&lt;li&gt;The filter assumes that the background url is the first listed style attribute,
+so it will replace &lt;code&gt;background: url(img.gif) #FFF&lt;/code&gt; but not &lt;code&gt;background: #FFF url(img.gif)&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;It can only include images that can be served by the application; i.e. references to images on external
+domains will be ignored.&lt;/li&gt;
+&lt;li&gt;The filter can be configured to not replace references to background images whose size is larger than a
+certain value, e.g. 32KB&lt;/li&gt;
+&lt;li&gt;Because the filter dynamically modifies the response by including images, changes to the actual images
+will not cause the last-modified headers of the CSS file to be updated; you'll need to &lt;code&gt;touch&lt;/code&gt; the CSS file as
+well if you want client to fetch a new version after modifying an image.&lt;/li&gt;
+&lt;li&gt;Be aware that embedding large background images in style sheets can have an adverse effect on page
+rendering; essentially your images will be loaded much sooner that if you left them as URL references.
+See this article for a great explanation. Obviously the idea is that you cache the larger CSS file,
+so as long as the CSS file is already in the cache, you won’t have that problem.&lt;/li&gt;
+&lt;/ol&gt;
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Preventing XSS attacks with AntiSamy (Part 2)</title>
+   <link href="http://barrypitman.github.com/2011/04/22/safe-and-clean-HTML-output-with-antisamy"/>
+   <updated>2011-04-22T00:00:00+02:00</updated>
+   <id>http://barrypitman.github.com/2011/04/22/safe-and-clean-HTML-output-with-antisamy</id>
+   <content type="html">&lt;h2&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;My &lt;a href=&quot;/2011/04/14/using-input-validation-XSS&quot;&gt;last blog post&lt;/a&gt; discussed one method of protecting your web
+application against Cross-Site Scripting (XSS) attacks; by filtering all user input with an
+&lt;a href=&quot;https://github.com/barrypitman/antisamy-servlet-filter&quot;&gt;AntiSamy servlet filter&lt;/a&gt;
+during request processing. In this post I’d like to discuss an alternative/complementary method involving AntiSamy;
+filtering HTML-formatted content during response processing.&lt;/p&gt;
+
+&lt;h2&gt;Recap&lt;/h2&gt;
+
+&lt;p&gt;To protect users from XSS attacks we should escape user-supplied inputs using e.g. &lt;code&gt;&amp;lt;c:out/&amp;gt;&lt;/code&gt; tags in JSP files.
+We can’t escape HTML-formatted content with ‘&amp;lt;c:out/&gt;’ tags because we’d be escaping the formatting as well.
+We need an intelligent library like AntiSamy to decide what formatting to allow and what to remove
+(based on a well-defined policy).&lt;/p&gt;
+
+&lt;p&gt;When displaying user-supplied HTML-formatted content to a user, XSS attacks are not the only thing we need to
+worry about. Imagine how this input: &lt;code&gt;&amp;lt;/div&amp;gt;&amp;lt;/div&amp;gt;&lt;/code&gt; could potentially mess up your layout! Fortunately AntiSamy
+will also check for unclosed tags and remove/close them for you.&lt;/p&gt;
+
+&lt;h2&gt;Solution&lt;/h2&gt;
+
+&lt;p&gt;The solution is implemented as a JSP custom tag, making it simple to re-use. Using it in a JSP file might look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;safeHtml:out text=&quot;${someBean.htmlTextToRender}&quot;/&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We can also offer the developer the option of using a custom AntiSamy policy file:&lt;/p&gt;
+
+&lt;script src='https://gist.github.com/4557487.js?file=SafeHtmlTag.java'&gt;&lt;/script&gt;
+
+
+&lt;p&gt;&lt;noscript&gt;&lt;pre&gt;&lt;code&gt;/&lt;em&gt;*
+ * JSP tag that renders AntiSamy-filtered HTML, useful for displaying HTML markup in a safe way.
+ *
+ * @author barry pitman
+ * @since 2011/04/14 1:26 PM
+ &lt;/em&gt;/
+public class SafeHtmlTag extends TagSupport {&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;private static final long serialVersionUID = 1L;
+private static final Logger LOG = Logger.getLogger(SafeHtmlTag.class);
+private static final AntiSamy DEFAULT_ANTI_SAMY = new AntiSamy(loadPolicy(&amp;amp;quot;antisamy-default.xml&amp;amp;quot;));
+private static final Map&amp;amp;lt;String, Policy&amp;amp;gt; POLICY_CACHE = new ConcurrentHashMap&amp;amp;lt;String, Policy&amp;amp;gt;();
+
+private String text;
+private String policyFile;
+
+public void setText(String text) {
+    this.text = text;
+}
+
+public void setPolicyFile(String policyFile) {
+    this.policyFile = policyFile;
+}
+
+public int doStartTag() throws JspException {
+    try {
+        CleanResults scan = getAntiSamy().scan(text);
+        if (scan.getNumberOfErrors() &amp;amp;gt; 0) {
+            LOG.warn(&amp;amp;quot;antisamy encountered problem with input: &amp;amp;quot; + scan.getErrorMessages());
+        }
+        pageContext.getOut().print(scan.getCleanHTML());
+    } catch (Exception e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
+    return SKIP_BODY;
+}
+
+public int doEndTag() throws JspException {
+    return EVAL_PAGE;
+}
+
+protected AntiSamy getAntiSamy() {
+    if (policyFile == null || &amp;amp;quot;&amp;amp;quot;.equals(policyFile)) {
+        return DEFAULT_ANTI_SAMY;
+    }
+    return new AntiSamy(loadPolicy(policyFile));
+}
+
+private static Policy loadPolicy(String name) {
+    if (POLICY_CACHE.containsKey(name)) {
+        return POLICY_CACHE.get(name);
+    }
+    try {
+        LOG.debug(&amp;amp;quot;Loading policy file '&amp;amp;quot; + name + &amp;amp;quot;' from classpath&amp;amp;quot;);
+        URL url = SafeHtmlTag.class.getClassLoader().getResource(name);
+        if (url == null || url.getFile() == null) {
+            throw new FileNotFoundException(&amp;amp;quot;classpath file '&amp;amp;quot; + name + &amp;amp;quot;' was not found!&amp;amp;quot;);
+        }
+        Policy loadedPolicy = Policy.getInstance(url.getFile());
+        POLICY_CACHE.put(name, loadedPolicy);
+        return loadedPolicy;
+    } catch (Exception e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;}&lt;/code&gt;&lt;/pre&gt;&lt;/noscript&gt;&lt;/p&gt;
+
+&lt;p&gt;The tag implementation caches the loaded policy files internally as an optimization, and loads the policy
+file called ‘antisamy-default.xml’ from the classpath if no custom policyFile is specified.
+I’ve updated the source in the &lt;a href=&quot;https://github.com/barrypitman/antisamy-servlet-filter&quot;&gt;GitHub project&lt;/a&gt; from my
+last post with this tag.&lt;/p&gt;
+
+&lt;p&gt;I hope someone finds this useful!&lt;/p&gt;
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Preventing XSS attacks with AntiSamy (Part 1)</title>
+   <link href="http://barrypitman.github.com/2011/04/14/using-input-validation-XSS"/>
+   <updated>2011-04-14T00:00:00+02:00</updated>
+   <id>http://barrypitman.github.com/2011/04/14/using-input-validation-XSS</id>
+   <content type="html">
+
+&lt;p align=&quot;center&quot;&gt;
+  &lt;img src=&quot;http://imgs.xkcd.com/comics/exploits_of_a_mom.png&quot;/&gt;
+&lt;/p&gt;
+
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;/2011/04/22/safe-and-clean-HTML-output-with-antisamy&quot;&gt;&amp;raquo; Skip to Part 2 &amp;raquo;&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Cross Site Scripting (XSS) attacks are a &lt;a href=&quot;http://en.wikipedia.org/wiki/Cross-site_scripting&quot;&gt;well&lt;/a&gt;
+&lt;a href=&quot;http://code.google.com/p/owaspantisamy/downloads/detail?name=Arshan%20Dabirsiaghi%20-%20Towards%20Malicious%20Code%20Detection%20and%20Removal.PDF&quot;&gt;documented&lt;/a&gt;
+vulnerability affecting many web applications.
+There has been a spate of high-profile &lt;a href=&quot;http://www.theregister.co.uk/2011/03/29/mcafee_website_security_flaws/&quot;&gt;XSS&lt;/a&gt;
+&lt;a href=&quot;http://www.theregister.co.uk/2010/09/22/twitter_xss_genesis/&quot;&gt;cases&lt;/a&gt; &lt;a href=&quot;http://www.theregister.co.uk/2010/10/04/anti_virus_vendor_xss_snafu/&quot;&gt;recently&lt;/a&gt;.
+Methods of protecting against these attacks depend on whether you want to accept any HTML formatted text from your
+users or not:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;h4&gt;Escape all user-supplied data on rendering&lt;/h4&gt;
+
+&lt;p&gt;If you don’t plan on accepting HTML input, you can simply escape all user-supplied data.
+In a Java JSP application, this means outputting your text using the &lt;code&gt;&amp;lt;c:out&amp;gt;&lt;/code&gt; tag or &lt;code&gt;${fn:escapeXml(text)}&lt;/code&gt;
+function instead of just &lt;code&gt;${text}&lt;/code&gt;. Once you’re in the habit of doing this, it might not be too bad,
+however forgetting just one instance will leave your application vulnerable to attack.
+Its easy to imagine a developer forgetting to escape some text while developing an email template.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h4&gt;Filter out invalid/malicious user-supplied data on submit&lt;/h4&gt;
+
+&lt;p&gt;If you do plan on accepting HTML input, you need to decide what type of input is allowed.
+Many forums and applications using rich-text editors accept a limited subset of HTML from the user.
+Most likely you’ll want to exclude/filter &lt;code&gt;&amp;lt;script&amp;gt;&lt;/code&gt; tags.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;But there are many other tags/characters you would want to exclude too.
+Just look at &lt;a href=&quot;http://ha.ckers.org/xss.html&quot;&gt;http://ha.ckers.org/xss.html&lt;/a&gt; to see some of the vast array of exploits,
+and those are just the documented ones. Protecting against all possible attacks by exclusion is almost impossible.&lt;/p&gt;
+
+&lt;p&gt;The preferred method is to specify what content the user is allowed to submit
+(a whitelist as opposed to a blacklist), and filter/purify everything else.
+Writing such a library is tricky at best, so go with a recognised, widely used solution.
+&lt;a href=&quot;http://htmlpurifier.org/&quot;&gt;HTML Purifier&lt;/a&gt; for PHP and &lt;a href=&quot;http://code.google.com/p/owaspantisamy/&quot;&gt;AntiSamy&lt;/a&gt; for Java/.NET
+are two such solutions.&lt;/p&gt;
+
+&lt;h2&gt;This is difficult!&lt;/h2&gt;
+
+&lt;p&gt;Implementing either of the solutions above on a case-by-case basis would be a pain.
+It gets in the way of what we really want to do, which is develop new features.
+Ideally we would like a solution that protects the application and its users by default.
+It would have been nice if the JSP default for outputting text with ${} was to escape it.
+Then applications would be safe (to a large degree) from XSS attacks by default,
+and we could un-escape text when we wanted to. Unfortunately that’s not the case.
+Edit: &lt;a href=&quot;http://pukkaone.github.com/2011/01/03/jsp-cross-site-scripting-elresolver.html&quot;&gt;here&lt;/a&gt; is an article
+describing how to override JSP EL expressions by default, though I haven’t tried it yet.&lt;/p&gt;
+
+&lt;h2&gt;A solution&lt;/h2&gt;
+
+&lt;p&gt;One solution is to implement a Java servlet filter which intercepts requests to the
+server before they are processed, cleaning the submitted parameters using AntiSamy.
+The application will only see the sanitized request parameters, so that the user-supplied
+data is safe for re-display later. Assuming that you don’t already have malicious content
+in your database, this approach should keep your users safe from XSS attacks, without you
+needing to escape text every time you display it. Note however that for non-HTML formatted
+text, you might as well escape user-supplied text as a precaution.
+The advantage of using a filter is that it can very easily be applied to all requests and all
+requests parameters, without your business logic having worry about cleaning submitted data.
+The obvious disadvantage to using a filter-based approach is that it is more difficult to
+cater for exceptions to the rule. AntiSamy policy files allow one to declare your own rules,
+so you can be as strict or lax as you like. It’s difficult to imagine a scenario where a user submitting:&lt;/p&gt;
+
+&lt;p&gt;username: &lt;code&gt;&amp;lt;SCRIPT/XSS SRC=&quot;http://ha.ckers.org/xss.js&quot;&amp;gt;&amp;lt;/SCRIPT&amp;gt;&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;would be ok!
+Another disadvantage is the processing overhead of passing every request parameter through AntiSamy.
+Although AntiSamy is designed for speed, my experience is that passing parameters through the
+filter costs approximately 0.3ms per parameter on my machine (for shortish strings). For a large form
+that might add up to 20ms or more. Depending on your application that may or may not be a problem.&lt;/p&gt;
+
+&lt;h2&gt;Implementation&lt;/h2&gt;
+
+&lt;p&gt;Here is my filter class, using a HttpServletRequestWrapper internally to override the &lt;code&gt;getParameter()&lt;/code&gt;-type methods:&lt;/p&gt;
+
+&lt;script src='https://gist.github.com/4557334.js?file=AntiSamyFilter.java'&gt;&lt;/script&gt;
+
+
+&lt;p&gt;&lt;noscript&gt;&lt;pre&gt;&lt;code&gt;/&lt;em&gt;*
+ * Servlet filter that checks all request parameters for potential XSS attacks.
+ * see http://bazageous.com/2011/04/14/preventing-xss-attacks-with-antisamy/
+ *
+ * @author barry pitman
+ * @since 2011/04/12 5:13 PM
+ &lt;/em&gt;/
+public class AntiSamyFilter implements Filter {&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;private static final Logger LOG = Logger.getLogger(AntiSamyFilter.class);
+
+/**
+ * AntiSamy is unfortunately not immutable, but is threadsafe if we only call
+ * {@link AntiSamy#scan(String taintedHTML, int scanType)}
+ */
+private final AntiSamy antiSamy;
+
+public AntiSamyFilter() {
+    try {
+        URL url = this.getClass().getClassLoader().getResource(&amp;amp;quot;antisamy-slashdot-1.4.4.xml&amp;amp;quot;);
+        Policy policy = Policy.getInstance(url.getFile());
+        antiSamy = new AntiSamy(policy);
+    } catch (PolicyException e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
+}
+
+public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    if (request instanceof HttpServletRequest) {
+        CleanServletRequest cleanRequest = new CleanServletRequest((HttpServletRequest) request, antiSamy);
+        chain.doFilter(cleanRequest, response);
+    } else {
+        chain.doFilter(request, response);
+    }
+}
+
+public void init(FilterConfig filterConfig) throws ServletException {
+}
+
+public void destroy() {
+}
+
+/**
+ * Wrapper for a {@link HttpServletRequest} that returns 'safe' parameter values by
+ * passing the raw request parameters through the anti-samy filter. Should be private
+ */
+private static class CleanServletRequest extends HttpServletRequestWrapper {
+
+    private final AntiSamy antiSamy;
+
+    private CleanServletRequest(HttpServletRequest request, AntiSamy antiSamy) {
+        super(request);
+        this.antiSamy = antiSamy;
+    }
+
+    /**
+     * overriding getParameter functions in {@link ServletRequestWrapper}
+     */
+    @Override
+    public String[] getParameterValues(String name) {
+        String[] originalValues = super.getParameterValues(name);
+        if (originalValues == null) {
+            return null;
+        }
+        List&amp;amp;lt;String&amp;amp;gt; newValues = new ArrayList&amp;amp;lt;String&amp;amp;gt;(originalValues.length);
+        for (String value : originalValues) {
+            newValues.add(filterString(value));
+        }
+        return newValues.toArray(new String[newValues.size()]);
+    }
+
+    @Override
+    @SuppressWarnings(&amp;amp;quot;unchecked&amp;amp;quot;)
+    public Map getParameterMap() {
+        Map&amp;amp;lt;String, String[]&amp;amp;gt; originalMap = super.getParameterMap();
+        Map&amp;amp;lt;String, String[]&amp;amp;gt; filteredMap = new ConcurrentHashMap&amp;amp;lt;String, String[]&amp;amp;gt;(originalMap.size());
+        for (String name : originalMap.keySet()) {
+            filteredMap.put(name, getParameterValues(name));
+        }
+        return Collections.unmodifiableMap(filteredMap);
+    }
+
+    @Override
+    public String getParameter(String name) {
+        String potentiallyDirtyParameter = super.getParameter(name);
+        return filterString(potentiallyDirtyParameter);
+    }
+
+    /**
+     * @param potentiallyDirtyParameter string to be cleaned
+     * @return a clean version of the same string
+     */
+    private String filterString(String potentiallyDirtyParameter) {
+        if (potentiallyDirtyParameter == null || &amp;amp;quot;&amp;amp;quot;.equals(potentiallyDirtyParameter)) {
+            return potentiallyDirtyParameter;
+        }
+
+        try {
+            CleanResults cr = antiSamy.scan(potentiallyDirtyParameter, AntiSamy.DOM);
+            if (cr.getNumberOfErrors() &amp;amp;gt; 0) {
+                LOG.warn(&amp;amp;quot;antisamy encountered problem with input: &amp;amp;quot; + cr.getErrorMessages());
+            }
+            return cr.getCleanHTML();
+        } catch (Exception e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;}&lt;/code&gt;&lt;/pre&gt;&lt;/noscript&gt;&lt;/p&gt;
+
+&lt;h3&gt;Notes:&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;This method will clean data submitted by regular form submissions from a browser.
+If your application has other methods of data-input, e.g. a SOAP web service,
+you will need to cater for that separately.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;The filter will ‘modify’ the user-submitted data if it is deemed dangerous.
+This is something to bear in mind when you are debugging.
+The filter will at least log instances where inputs have been modified.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;I haven’t tested it with file uploads so I’m not sure what effect, if any, that would have.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;The implementation does not cache the filtered values, so calling request.getParameter(“name”)
+twice will cause the value to be cleaned twice. Caching could be implemented if required.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;I’ve uploaded the source code as a maven project on &lt;a href=&quot;https://github.com/barrypitman/antisamy-servlet-filter&quot;&gt;GitHub&lt;/a&gt;.
+It includes a sample web application with simple JSP for testing the output of XSS hacks against the filter above, and a
+maven-jetty-plugin configuration to get going quickly.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;This is an application-level filter. You might also want to use a firewall,
+e.g. &lt;a href=&quot;http://www.modsecurity.org/&quot;&gt;mod_security&lt;/a&gt; for Apache for defence-in-depth.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;Useful Resources:&lt;/h3&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&quot;http://code.google.com/p/doctype/wiki/ArticleIntroductionToXSS&quot;&gt;http://code.google.com/p/doctype/wiki/ArticleIntroductionToXSS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://blog.modsecurity.org/2008/07/do-you-know-how.html&quot;&gt;http://blog.modsecurity.org/2008/07/do-you-know-how.html&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://ha.ckers.org/xss.html&quot;&gt;http://ha.ckers.org/xss.html&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;Please let me know if you find any issues, or have suggestions for improvement!&lt;/p&gt;
+</content>
+ </entry>
+ 
+ 
+</feed>

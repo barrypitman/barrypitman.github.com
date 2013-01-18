@@ -1,0 +1,411 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Preventing XSS attacks with AntiSamy (Part 1)</title>
+    <meta name="description" content="Using input validation to filter XSS in input parameters">
+    <meta name="author" content="Barry Pitman">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+    <link href="/assets/themes/twitter/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/themes/twitter/css/style.css?body=1" rel="stylesheet" type="text/css" media="all">
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/themes/twitter/../../images/favicon.ico">
+  </head>
+
+  <body>
+
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="/">Barry Pitman</a>
+          <ul class="nav">
+            
+            
+            
+
+
+  
+    
+      
+      	
+      	<li><a href="/about.html">About</a></li>
+      	
+      
+    
+  
+    
+      
+      	
+      	<li><a href="/archive.html">Archive</a></li>
+      	
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+
+
+
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="content">
+        
+<div class="page-header">
+  <h1>Preventing XSS attacks with AntiSamy (Part 1)</h1>
+</div>
+
+<div class="row">
+  <div class="span12">
+    
+
+<p align="center">
+  <img src="http://imgs.xkcd.com/comics/exploits_of_a_mom.png"/>
+</p>
+
+
+<p><strong><a href="/2011/04/22/safe-and-clean-HTML-output-with-antisamy">&raquo; Skip to Part 2 &raquo;</a></strong></p>
+
+<p>Cross Site Scripting (XSS) attacks are a <a href="http://en.wikipedia.org/wiki/Cross-site_scripting">well</a>
+<a href="http://code.google.com/p/owaspantisamy/downloads/detail?name=Arshan%20Dabirsiaghi%20-%20Towards%20Malicious%20Code%20Detection%20and%20Removal.PDF">documented</a>
+vulnerability affecting many web applications.
+There has been a spate of high-profile <a href="http://www.theregister.co.uk/2011/03/29/mcafee_website_security_flaws/">XSS</a>
+<a href="http://www.theregister.co.uk/2010/09/22/twitter_xss_genesis/">cases</a> <a href="http://www.theregister.co.uk/2010/10/04/anti_virus_vendor_xss_snafu/">recently</a>.
+Methods of protecting against these attacks depend on whether you want to accept any HTML formatted text from your
+users or not:</p>
+
+<ol>
+<li><h4>Escape all user-supplied data on rendering</h4>
+
+<p>If you don’t plan on accepting HTML input, you can simply escape all user-supplied data.
+In a Java JSP application, this means outputting your text using the <code>&lt;c:out&gt;</code> tag or <code>${fn:escapeXml(text)}</code>
+function instead of just <code>${text}</code>. Once you’re in the habit of doing this, it might not be too bad,
+however forgetting just one instance will leave your application vulnerable to attack.
+Its easy to imagine a developer forgetting to escape some text while developing an email template.</p></li>
+<li><h4>Filter out invalid/malicious user-supplied data on submit</h4>
+
+<p>If you do plan on accepting HTML input, you need to decide what type of input is allowed.
+Many forums and applications using rich-text editors accept a limited subset of HTML from the user.
+Most likely you’ll want to exclude/filter <code>&lt;script&gt;</code> tags.</p></li>
+</ol>
+
+
+<p>But there are many other tags/characters you would want to exclude too.
+Just look at <a href="http://ha.ckers.org/xss.html">http://ha.ckers.org/xss.html</a> to see some of the vast array of exploits,
+and those are just the documented ones. Protecting against all possible attacks by exclusion is almost impossible.</p>
+
+<p>The preferred method is to specify what content the user is allowed to submit
+(a whitelist as opposed to a blacklist), and filter/purify everything else.
+Writing such a library is tricky at best, so go with a recognised, widely used solution.
+<a href="http://htmlpurifier.org/">HTML Purifier</a> for PHP and <a href="http://code.google.com/p/owaspantisamy/">AntiSamy</a> for Java/.NET
+are two such solutions.</p>
+
+<h2>This is difficult!</h2>
+
+<p>Implementing either of the solutions above on a case-by-case basis would be a pain.
+It gets in the way of what we really want to do, which is develop new features.
+Ideally we would like a solution that protects the application and its users by default.
+It would have been nice if the JSP default for outputting text with ${} was to escape it.
+Then applications would be safe (to a large degree) from XSS attacks by default,
+and we could un-escape text when we wanted to. Unfortunately that’s not the case.
+Edit: <a href="http://pukkaone.github.com/2011/01/03/jsp-cross-site-scripting-elresolver.html">here</a> is an article
+describing how to override JSP EL expressions by default, though I haven’t tried it yet.</p>
+
+<h2>A solution</h2>
+
+<p>One solution is to implement a Java servlet filter which intercepts requests to the
+server before they are processed, cleaning the submitted parameters using AntiSamy.
+The application will only see the sanitized request parameters, so that the user-supplied
+data is safe for re-display later. Assuming that you don’t already have malicious content
+in your database, this approach should keep your users safe from XSS attacks, without you
+needing to escape text every time you display it. Note however that for non-HTML formatted
+text, you might as well escape user-supplied text as a precaution.
+The advantage of using a filter is that it can very easily be applied to all requests and all
+requests parameters, without your business logic having worry about cleaning submitted data.
+The obvious disadvantage to using a filter-based approach is that it is more difficult to
+cater for exceptions to the rule. AntiSamy policy files allow one to declare your own rules,
+so you can be as strict or lax as you like. It’s difficult to imagine a scenario where a user submitting:</p>
+
+<p>username: <code>&lt;SCRIPT/XSS SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</code></p>
+
+<p>would be ok!
+Another disadvantage is the processing overhead of passing every request parameter through AntiSamy.
+Although AntiSamy is designed for speed, my experience is that passing parameters through the
+filter costs approximately 0.3ms per parameter on my machine (for shortish strings). For a large form
+that might add up to 20ms or more. Depending on your application that may or may not be a problem.</p>
+
+<h2>Implementation</h2>
+
+<p>Here is my filter class, using a HttpServletRequestWrapper internally to override the <code>getParameter()</code>-type methods:</p>
+
+<script src='https://gist.github.com/4557334.js?file=AntiSamyFilter.java'></script>
+
+
+<p><noscript><pre><code>/<em>*
+ * Servlet filter that checks all request parameters for potential XSS attacks.
+ * see http://bazageous.com/2011/04/14/preventing-xss-attacks-with-antisamy/
+ *
+ * @author barry pitman
+ * @since 2011/04/12 5:13 PM
+ </em>/
+public class AntiSamyFilter implements Filter {</p>
+
+<pre><code>private static final Logger LOG = Logger.getLogger(AntiSamyFilter.class);
+
+/**
+ * AntiSamy is unfortunately not immutable, but is threadsafe if we only call
+ * {@link AntiSamy#scan(String taintedHTML, int scanType)}
+ */
+private final AntiSamy antiSamy;
+
+public AntiSamyFilter() {
+    try {
+        URL url = this.getClass().getClassLoader().getResource(&amp;quot;antisamy-slashdot-1.4.4.xml&amp;quot;);
+        Policy policy = Policy.getInstance(url.getFile());
+        antiSamy = new AntiSamy(policy);
+    } catch (PolicyException e) {
+        throw new IllegalStateException(e.getMessage(), e);
+    }
+}
+
+public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    if (request instanceof HttpServletRequest) {
+        CleanServletRequest cleanRequest = new CleanServletRequest((HttpServletRequest) request, antiSamy);
+        chain.doFilter(cleanRequest, response);
+    } else {
+        chain.doFilter(request, response);
+    }
+}
+
+public void init(FilterConfig filterConfig) throws ServletException {
+}
+
+public void destroy() {
+}
+
+/**
+ * Wrapper for a {@link HttpServletRequest} that returns 'safe' parameter values by
+ * passing the raw request parameters through the anti-samy filter. Should be private
+ */
+private static class CleanServletRequest extends HttpServletRequestWrapper {
+
+    private final AntiSamy antiSamy;
+
+    private CleanServletRequest(HttpServletRequest request, AntiSamy antiSamy) {
+        super(request);
+        this.antiSamy = antiSamy;
+    }
+
+    /**
+     * overriding getParameter functions in {@link ServletRequestWrapper}
+     */
+    @Override
+    public String[] getParameterValues(String name) {
+        String[] originalValues = super.getParameterValues(name);
+        if (originalValues == null) {
+            return null;
+        }
+        List&amp;lt;String&amp;gt; newValues = new ArrayList&amp;lt;String&amp;gt;(originalValues.length);
+        for (String value : originalValues) {
+            newValues.add(filterString(value));
+        }
+        return newValues.toArray(new String[newValues.size()]);
+    }
+
+    @Override
+    @SuppressWarnings(&amp;quot;unchecked&amp;quot;)
+    public Map getParameterMap() {
+        Map&amp;lt;String, String[]&amp;gt; originalMap = super.getParameterMap();
+        Map&amp;lt;String, String[]&amp;gt; filteredMap = new ConcurrentHashMap&amp;lt;String, String[]&amp;gt;(originalMap.size());
+        for (String name : originalMap.keySet()) {
+            filteredMap.put(name, getParameterValues(name));
+        }
+        return Collections.unmodifiableMap(filteredMap);
+    }
+
+    @Override
+    public String getParameter(String name) {
+        String potentiallyDirtyParameter = super.getParameter(name);
+        return filterString(potentiallyDirtyParameter);
+    }
+
+    /**
+     * @param potentiallyDirtyParameter string to be cleaned
+     * @return a clean version of the same string
+     */
+    private String filterString(String potentiallyDirtyParameter) {
+        if (potentiallyDirtyParameter == null || &amp;quot;&amp;quot;.equals(potentiallyDirtyParameter)) {
+            return potentiallyDirtyParameter;
+        }
+
+        try {
+            CleanResults cr = antiSamy.scan(potentiallyDirtyParameter, AntiSamy.DOM);
+            if (cr.getNumberOfErrors() &amp;gt; 0) {
+                LOG.warn(&amp;quot;antisamy encountered problem with input: &amp;quot; + cr.getErrorMessages());
+            }
+            return cr.getCleanHTML();
+        } catch (Exception e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
+    }
+}
+</code></pre>
+
+<p>}</code></pre></noscript></p>
+
+<h3>Notes:</h3>
+
+<ul>
+<li><p>This method will clean data submitted by regular form submissions from a browser.
+If your application has other methods of data-input, e.g. a SOAP web service,
+you will need to cater for that separately.</p></li>
+<li><p>The filter will ‘modify’ the user-submitted data if it is deemed dangerous.
+This is something to bear in mind when you are debugging.
+The filter will at least log instances where inputs have been modified.</p></li>
+<li><p>I haven’t tested it with file uploads so I’m not sure what effect, if any, that would have.</p></li>
+<li><p>The implementation does not cache the filtered values, so calling request.getParameter(“name”)
+twice will cause the value to be cleaned twice. Caching could be implemented if required.</p></li>
+<li><p>I’ve uploaded the source code as a maven project on <a href="https://github.com/barrypitman/antisamy-servlet-filter">GitHub</a>.
+It includes a sample web application with simple JSP for testing the output of XSS hacks against the filter above, and a
+maven-jetty-plugin configuration to get going quickly.</p></li>
+<li><p>This is an application-level filter. You might also want to use a firewall,
+e.g. <a href="http://www.modsecurity.org/">mod_security</a> for Apache for defence-in-depth.</p></li>
+</ul>
+
+
+<h3>Useful Resources:</h3>
+
+<ol>
+<li><a href="http://code.google.com/p/doctype/wiki/ArticleIntroductionToXSS">http://code.google.com/p/doctype/wiki/ArticleIntroductionToXSS</a></li>
+<li><a href="http://blog.modsecurity.org/2008/07/do-you-know-how.html">http://blog.modsecurity.org/2008/07/do-you-know-how.html</a></li>
+<li><a href="http://ha.ckers.org/xss.html">http://ha.ckers.org/xss.html</a></li>
+</ol>
+
+
+<p>Please let me know if you find any issues, or have suggestions for improvement!</p>
+
+    <hr>
+    <div class="pagination">
+      <ul>
+      
+        <li class="prev disabled"><a>&larr; Previous</a></li>
+      
+        <li><a href="/archive.html">Archive</a></li>
+      
+        <li class="next"><a href="/2011/04/22/safe-and-clean-HTML-output-with-antisamy" title="Preventing XSS attacks with AntiSamy (Part 2)">Next &rarr;</a></li>
+      
+      </ul>
+    </div>
+    <hr>
+    
+
+
+  <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_developer = 1;
+    var disqus_shortname = 'barrypitman'; // required: replace example with your forum shortname
+    
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">blog comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+
+
+  </div>
+
+</div>
+
+
+      </div>
+
+      <footer>
+          <div class="row">
+              <div class="span2 offset3">
+                  &copy; Barry Pitman 2013
+              </div>
+              <div class="span2">
+                  <a href="http://github.com/barrypitman">github.com/barrypitman</a>
+                  <a href="http://twitter.com/barrypitman">twitter.com/barrypitman</a>
+              </div>
+              <div class="span2">
+                   
+
+  
+  		
+<ul class="post-share ulno mob">
+
+<!-- Twitter -->
+<li class="tw"><a href="https://twitter.com/share" class="twitter-share-button" data-text="Preventing XSS attacks with AntiSamy (Part 1)" data-via="" data-related="barrypitman" data-count="" data-size="">Tweet</a>
+
+<!-- Google+ -->
+<li class="gp"><div class="g-plusone" data-size="medium" data-annotation="bubble" data-width=""></div>
+
+
+</ul>
+
+<script>
+
+(function(doc, script) {
+
+    // Async Social Buttons
+    var js,
+        fjs = doc.getElementsByTagName(script)[0],
+        add = function(url, id) {
+            if (doc.getElementById(id)) {return;}
+            js = doc.createElement(script);
+            js.src = url;
+            id && (js.id = id);
+            fjs.parentNode.insertBefore(js, fjs);
+        };
+
+    // Twitter SDK
+    add('//platform.twitter.com/widgets.js', 'twitter-wjs');
+
+    // Google+ button
+    add('https://apis.google.com/js/plusone.js');
+
+}(document, 'script'));
+
+</script>
+  
+
+
+              </div>
+          </div>
+      </footer>
+
+    </div> <!-- /container -->
+
+    
+  </body>
+</html>
+

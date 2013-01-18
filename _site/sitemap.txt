@@ -1,0 +1,10 @@
+
+http://barrypitman.github.com/about.html
+http://barrypitman.github.com/archive.html
+http://barrypitman.github.com/atom.xml
+http://barrypitman.github.com/index.html
+http://barrypitman.github.com/sitemap.txt
+
+http://barrypitman.github.com/2011/06/17/runtime-image-to-datauri-in-css
+http://barrypitman.github.com/2011/04/22/safe-and-clean-HTML-output-with-antisamy
+http://barrypitman.github.com/2011/04/14/using-input-validation-XSS
