@@ -7,6 +7,15 @@ tags: [css, datauri, runtime]
 ---
 {% include JB/setup %}
 
+
+## Update: 24/01/2013:
+[wro4j](http://code.google.com/p/wro4j/) (Web Resource Optimizer for Java) has a
+"[CssDataUriProcessor"](http://code.google.com/p/wro4j/wiki/Base64DataUriSupport) that performs pretty much the same
+function as the filter described here. I would suggest that you checkout wro4j's implementation, not least because its
+a great project and well supported. Plus, it goes one better by providing a
+["FallbackCssDataUriProcessor"](http://code.google.com/p/wro4j/wiki/FallbackCssDataUriProcessor), which has a
+fallback for older IE versions, so you can use the same stylesheet.
+
 ## Introduction
 [Data URI's](http://en.wikipedia.org/wiki/Data_URI_scheme) are a method of embedding inline data in web page responses.
 For instance, using data URIs, a background image can be embedded within a
